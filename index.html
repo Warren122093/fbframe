@@ -202,6 +202,8 @@
     function renderFbEmbed(url) {
       const wrap = document.getElementById('fbVideoWrap');
       // Add autoplay param in href and data-autoplay for Facebook
+      // Facebook will only autoplay if allowed by browser and Facebook policy
+      // If you want to try iframe style, see the note below
       wrap.innerHTML = `
         <div class="fb-video" data-href="${url}?autoplay=1" data-width="440" data-allowfullscreen="true" data-show-text="false" data-autoplay="true">
           <div class="fb-xfbml-parse-ignore">
