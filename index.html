@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Facebook Video Embed Reload on Play</title>
+  <title>Facebook Video Embed XFBML Autoplay & Reload</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <link href="https://fonts.googleapis.com/css?family=Roboto:400,700&display=swap" rel="stylesheet">
   <style>
@@ -161,7 +161,7 @@
   <script async defer src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v3.0"></script>
 
   <div class="container">
-    <h1>Facebook Video Embed</h1>
+    <h1>Facebook Video Embed (XFBML)</h1>
     <div class="form-group">
       <input type="text" id="videoUrl" placeholder="Paste public Facebook video link here" value="">
       <button onclick="loadFbVideo()" id="loadBtn">Load</button>
@@ -172,29 +172,17 @@
     <div class="countdown" id="countdown"></div>
     <div class="iframe-wrap" id="fbVideoWrap"></div>
     <div class="note">
-      Paste a <b>public Facebook video URL</b>. When you click <b>Play Video</b>, a <b>7-second</b> timer will start, then the video will reload.<br>
+      Paste a <b>public Facebook video URL</b>. The embed will <b>try to autoplay</b> and reload every <b>7 seconds</b>.<br>
       <b>Example:</b> https://www.facebook.com/facebook/videos/10153231379946729/<br>
-      <b>Tip:</b> Serve this file with a local web server (<b>not</b> file://) for Facebook embed to work!
+      <b>Tip:</b> Serve this file with a local web server (<b>not</b> file://) for Facebook embed to work!<br>
+      <b>Note:</b> Facebook and browsers may still block autoplay.
     </div>
   </div>
   <script>
     let reloadTimeout = null;
     let countdownInterval = null;
     let currentUrl = "";
-    let fbPlayer = null;
     let countdownElem = document.getElementById('countdown');
-    let stopRequested = false;
-
-    // Animation for input focus
-    document.addEventListener('DOMContentLoaded', function() {
-      const input = document.getElementById('videoUrl');
-      input.addEventListener('focus', function() {
-        this.parentElement.classList.add('active');
-      });
-      input.addEventListener('blur', function() {
-        this.parentElement.classList.remove('active');
-      });
-    });
 
     function loadFbVideo() {
       stopReloading();
@@ -211,18 +199,21 @@
       renderFbEmbed(url);
       document.getElementById('stopBtn').disabled = false;
       countdownElem.textContent = '';
+      startCountdownAndReload();
     }
 
     function renderFbEmbed(url) {
       stopReloading();
-      fbPlayer = null;
       const wrap = document.getElementById('fbVideoWrap');
+      // Try all autoplay flags (may not work depending on browser/Facebook)
       wrap.innerHTML = `
         <div class="fb-video"
-          data-href="${url}"
+          data-href="${url}?autoplay=1"
           data-width="440"
           data-allowfullscreen="true"
-          data-show-text="false">
+          data-show-text="false"
+          data-autoplay="true"
+        >
           <div class="fb-xfbml-parse-ignore">
             <blockquote cite="${url}">
               <a href="${url}">Facebook Video</a>
@@ -230,9 +221,7 @@
           </div>
         </div>`;
       waitForFbSdk(() => {
-        window.FB.XFBML.parse(wrap, function() {
-          setupPlayerListener();
-        });
+        window.FB.XFBML.parse(wrap);
       });
     }
 
@@ -242,29 +231,6 @@
       } else {
         setTimeout(() => waitForFbSdk(callback), 200);
       }
-    }
-
-    function setupPlayerListener() {
-      // Try to get the player instance for the video
-      if (!window.FB || !window.FB.Event || !window.FB.Event.subscribe) return;
-      // Unsubscribe previous
-      window.FB.Event.unsubscribe('xfbml.ready', onXFBMLReady);
-      window.FB.Event.subscribe('xfbml.ready', onXFBMLReady);
-    }
-
-    function onXFBMLReady(msg) {
-      // Only listen for the video player
-      if (msg.type === "video") {
-        fbPlayer = msg.instance;
-        // Remove old event if any
-        fbPlayer.unsubscribe('startedPlaying', onVideoStarted);
-        fbPlayer.subscribe('startedPlaying', onVideoStarted);
-      }
-    }
-
-    function onVideoStarted() {
-      // Start 7-second countdown
-      startCountdownAndReload();
     }
 
     function startCountdownAndReload() {
@@ -281,7 +247,8 @@
       }, 1000);
       reloadTimeout = setTimeout(() => {
         countdownElem.textContent = '';
-        reloadFbVideo();
+        renderFbEmbed(currentUrl);
+        startCountdownAndReload();
       }, 7000);
     }
 
@@ -292,26 +259,11 @@
         : '';
     }
 
-    function reloadFbVideo() {
-      if (stopRequested) return;
-      renderFbEmbed(currentUrl);
-    }
-
     function stopReloading() {
-      stopRequested = true;
       clearTimeout(reloadTimeout);
       clearInterval(countdownInterval);
       countdownElem.textContent = '';
       document.getElementById('stopBtn').disabled = true;
-      // Unsubscribe event if player exists
-      if (fbPlayer) {
-        fbPlayer.unsubscribe('startedPlaying', onVideoStarted);
-      }
-      // Remove xfbml.ready event for safety
-      if (window.FB && window.FB.Event && window.FB.Event.unsubscribe) {
-        window.FB.Event.unsubscribe('xfbml.ready', onXFBMLReady);
-      }
-      stopRequested = false;
     }
   </script>
 </body>
