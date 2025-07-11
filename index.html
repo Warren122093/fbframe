@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Facebook Video Embed v3.0 Test</title>
+  <style>
+    body {
+      font-family: 'Roboto', Arial, sans-serif;
+      background: linear-gradient(135deg, #232526 0%, #414345 100%);
+      color: #fff;
+      margin: 0;
+      padding: 0;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .container {
+      background: #fff;
+      color: #232526;
+      border-radius: 18px;
+      box-shadow: 0 6px 32px rgba(0,0,0,0.2);
+      padding: 36px 40px 32px 40px;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+    }
+    h1 {
+      font-weight: 700;
+      color: #232526;
+      margin-bottom: 12px;
+    }
+    .form-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 18px;
+    }
+    input[type="text"] {
+      flex: 1;
+      padding: 12px 10px;
+      border: 1.5px solid #414345;
+      border-radius: 6px;
+      font-size: 1rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    input[type="text"]:focus {
+      border-color: #232526;
+    }
+    button {
+      background: #232526;
+      color: #fff;
+      border: none;
+      padding: 12px 18px;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    button:hover {
+      background: #414345;
+    }
+    .actions {
+      margin-bottom: 18px;
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+    }
+    .iframe-wrap {
+      margin-top: 20px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 2px solid #e0e0e0;
+      background: #1a1a1a;
+      min-height: 280px;
+    }
+    .note {
+      margin-top: 10px;
+      color: #757575;
+      font-size: 0.94rem;
+    }
+    @media (max-width: 600px) {
+      .container {
+        padding: 15px 4vw 20px 4vw;
+        max-width: 99vw;
+      }
+      input[type="text"] {
+        font-size: 0.97rem;
+      }
+      button {
+        font-size: 0.97rem;
+        padding: 10px 10px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Load Facebook SDK for JavaScript (v3.0) -->
+  <div id="fb-root"></div>
+  <script async defer src="https://connect.facebook.net/en_US/sdk.js#xfbml=1&version=v3.0"></script>
+
+  <div class="container">
+    <h1>Facebook Video Embed v3.0</h1>
+    <div class="form-group">
+      <input type="text" id="videoUrl" placeholder="Paste public Facebook video link here" value="https://www.facebook.com/facebook/videos/10153231379946729/">
+      <button onclick="loadFbVideo()">Load</button>
+    </div>
+    <div class="actions">
+      <button id="startBtn" onclick="startReloading()" disabled>Start</button>
+      <button id="stopBtn" onclick="stopReloading()" disabled>Stop</button>
+    </div>
+    <div class="iframe-wrap" id="fbVideoWrap">
+      <!-- Facebook video will be embedded here -->
+    </div>
+    <div class="note">
+      Paste a public Facebook video URL. The embed will reload every 6 seconds when started.<br>
+      <b>Example public video:</b><br>
+      https://www.facebook.com/facebook/videos/10153231379946729/<br>
+      <b>Note:</b> Serve this file with a local web server (not file://) for Facebook embed to work!
+    </div>
+  </div>
+  <script>
+    let reloadInterval = null;
+    let currentUrl = "";
+
+    function loadFbVideo() {
+      const url = document.getElementById('videoUrl').value.trim();
+      if (!url) {
+        alert("Please enter a public Facebook video URL.");
+        return;
+      }
+      // Basic validation for Facebook video URL
+      if (!/^https?:\/\/(www\.)?facebook\.com\//.test(url)) {
+        alert("Please enter a valid Facebook video URL.");
+        return;
+      }
+      currentUrl = url;
+      renderFbEmbed(url);
+
+      // Enable Start, disable Stop
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+
+      stopReloading();
+    }
+
+    function renderFbEmbed(url) {
+      const wrap = document.getElementById('fbVideoWrap');
+      wrap.innerHTML = `
+        <div class="fb-video" data-href="${url}" data-width="440" data-allowfullscreen="true" data-show-text="false">
+          <div class="fb-xfbml-parse-ignore">
+            <blockquote cite="${url}">
+              <a href="${url}">Facebook Video</a>
+            </blockquote>
+          </div>
+        </div>`;
+      waitForFbSdk(() => {
+        window.FB.XFBML.parse(wrap);
+      });
+    }
+
+    function waitForFbSdk(callback) {
+      if (window.FB && window.FB.XFBML && typeof window.FB.XFBML.parse === "function") {
+        callback();
+      } else {
+        setTimeout(() => waitForFbSdk(callback), 200);
+      }
+    }
+
+    function startReloading() {
+      if (!currentUrl) {
+        alert("Load a video first.");
+        return;
+      }
+      if (reloadInterval) clearInterval(reloadInterval);
+      reloadInterval = setInterval(() => {
+        renderFbEmbed(currentUrl);
+      }, 6000);
+
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('stopBtn').disabled = false;
+    }
+
+    function stopReloading() {
+      if (reloadInterval) clearInterval(reloadInterval);
+      reloadInterval = null;
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('stopBtn').disabled = true;
+    }
+
+    // Auto-embed on load for demo
+    window.onload = loadFbVideo;
+  </script>
+</body>
+</html>
